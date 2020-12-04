@@ -140,12 +140,94 @@ print(func()) # can_run为 False 时
 
 
 &emsp;
-# 4. 如何编写带参数的装饰器？如何调用？
-我们在调用装饰器的时候虽然没有显示的传参进去，但是其实这里我们隐式的传了一个参数进去：调用该装饰器的函数。
+# 4. 装饰器的参数
+## 4.1 `*args` 和 `**kargs` 是什么？
+&emsp; 为了传可变参数个数，我们来看下面的代码：
+```python
+from functools import wraps
+
+def decorator_name(func):
+    @wraps(func)
+    def decoratored_func(*args, **kargs):
+        print(*args)
+        print(kargs)
+        return func(*args, **kargs)
+    return decoratored_func
+
+@decorator_name
+def test(name, age):
+    print("My name is %s, I am %d years old."%(name, age))
+
+
+if __name__ == "__main__":
+    test("Jack", 23)
+```
+输出：
+> Jack 23
+> {}
+> My name is Jack, I am 23 years old.
+
+## 4.2 玩一定要用`*args` 和 `**kargs`，直接写需要的参数名不行吗？
+&emsp; &emsp; 可以直接写需要的参数名，但这样就把参数的个数限定死了，在装饰器中使用`*args` 和 `**kwargs` 主要是为了兼容，因为 每个调用装饰器的函数 的形参个数都不一样，这样写兼容性高：
+### 4.2.1 只修改`decorator_name装饰器`的形参形式
+
+```python
+def decorator_name(func):
+    @wraps(func)
+    def decoratored_func(arg1, arg2): # 这里没有使用*args和**kargs，而是将参数设为两个
+        print(arg1)
+        print(arg2)
+        return func(arg1, arg2)
+    return decoratored_func
+
+@decorator_name
+def test(name, age):
+    print("My name is %s, I am %d years old."%(name, age))
+
+if __name__ == "__main__":
+    test("Jack", 23)
+```
+输出：
+> Jack
+> 23
+> My name is Jack, I am 23 years old.
+> 
+**结论：代码正常运行，说明确实可以将装饰器的参数个数写成确定的个数。**
+
+### 4.2.2 修改`decorator_name装饰器`的形参形式，test()函数改为接收三个参数
+我们把上面的代码改一下：`decorator_name装饰器`直接把参数设为两个，test函数改为接收三个参数
+```python
+from functools import wraps
+
+def decorator_name(func):
+    @wraps(func)
+    def decoratored_func(arg1, arg2):# 这里没有使用*args和**kargs，而是将参数设为两个
+        print(arg1)
+        print(arg2)
+        return func(arg1, arg2)
+    return decoratored_func
+
+@decorator_name
+def test(name, age, sex): # test函数接收三个参数
+    print("My name is %s, I am %d years old."%(name, age))
+
+if __name__ == "__main__": # 传三个参数给test函数
+    test("Jack", 23, '男')
+```
+输出：
+>Traceback (most recent call last):
+>&emsp;  File "d:/code_practice/test.py", line 17, in <module>
+>&emsp;&emsp;    test("Jack", 23, '男')
+>TypeError: decoratored_func() takes 2 positional arguments but 3 were given
+>
+**代码报错，将装饰器的参数个数写成确定的个数会影响兼容性，因为你很难确定调用装饰器的函数接收几个参数，因此将装饰器的形成设为`*args` 和 `**kargs`会比较合理，不管调用装饰器的函数接收几个参数都不会报错。**
+
+## 4.3 如何编写带参数的装饰器？如何调用？
+&emsp;&emsp; 我们在调用装饰器的时候虽然没有显示的传参进去，但是其实这里我们隐式的传了一个参数进去：调用该装饰器的函数。
 我们来看一个 用来记录日志的 装饰器`logit`：
 ```python
 from functools import wraps
- 
+# 注意看，里面嵌套了 三层 ！三层！三层！
 def logit(logfile='out.log'):
     def logging_decorator(func):
         @wraps(func)
